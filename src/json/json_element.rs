@@ -12,6 +12,7 @@ pub trait JsonElement {
     fn is_array(&self)->bool{false}
     fn is_object(&self)->bool{false}
     fn is_primitive(&self)->bool{false}
+    fn is_null(&self)->bool{false}
     fn as_array(&self)->Result<&JsonArray>{
         jerr!("JSON Element is not an array")
     }
@@ -34,7 +35,7 @@ pub trait JsonElement {
 }
 
 pub struct JsonArray{
-    children:HashMap<i32,Box<dyn JsonElement>>
+    children:HashMap<usize,Box<dyn JsonElement>>
 }
 pub struct JsonObject{
     children:HashMap<String,Box<dyn JsonElement>>
@@ -54,11 +55,16 @@ impl JsonArray {
             children:HashMap::new()
         }.into()
     }
-    pub(crate) fn get_children(&mut self)->&mut HashMap<i32,Box<dyn JsonElement>>{
+    pub(crate) fn get_children(&mut self)->&mut HashMap<usize,Box<dyn JsonElement>>{
         &mut self.children
     }
-    pub fn get(&self,index:i32)->Option<&Box<dyn JsonElement>>{
-        self.children.get(&index)
+
+    pub fn get(&self,index:usize)->Result<&Box<dyn JsonElement>>{
+        match self.children.get(&index) {
+            Some(v)=>Ok(v),
+            None=>jerr!(format!("value at index {} is undefined",index))
+        }
+        
     }
 }
 
@@ -77,13 +83,19 @@ impl JsonObject {
     pub(crate) fn get_children(&mut self)->&mut HashMap<String,Box<dyn JsonElement>>{
         &mut self.children
     }
-    pub fn get(&self,key:&str)->Option<&Box<dyn JsonElement>>{
-        self.children.get(&key.to_string())
+    pub fn get(&self,key:&str)->Result<&Box<dyn JsonElement>>{
+        match self.children.get(&key.to_string()) {
+            Some(v)=>Ok(v),
+            None=>jerr!(format!("key \"{}\" is undefined",key))
+        }
     }
 }
 
 impl JsonElement for JsonPrimitive {
     fn is_primitive(&self)->bool {true}
+    fn is_null(&self)->bool {
+        self.value.token_type == TokenType::Null
+    }
     fn as_string(&self)->Result<String> {
         if matches!(self.value.token_type,TokenType::String){
             Ok(self.value.text.clone())
