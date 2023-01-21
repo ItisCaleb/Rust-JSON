@@ -58,7 +58,9 @@ impl JsonArray {
     pub(crate) fn get_children(&mut self)->&mut HashMap<usize,Box<dyn JsonElement>>{
         &mut self.children
     }
-
+    pub fn len(&self)->usize{
+        self.children.len()
+    }
     pub fn get(&self,index:usize)->Result<&Box<dyn JsonElement>>{
         match self.children.get(&index) {
             Some(v)=>Ok(v),
