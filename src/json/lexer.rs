@@ -35,8 +35,8 @@ impl Lexer {
         }
     }
 
-    pub fn lex(&mut self)->&mut VecDeque<Token>{
-        while self.position < self.input.len() {
+    pub fn lex(&mut self)->(&mut VecDeque<Token>,&Vec<String>){
+        while self.position < self.input.len() && self.diagnostic.len() == 0 {
             if self.current().is_ascii_whitespace(){
                 self.trim_white();
                 continue;
@@ -49,11 +49,15 @@ impl Lexer {
                 self.parse_string();
                 continue;
             }
+            if self.current().is_ascii_alphabetic(){
+                self.parse_keyword();
+                continue;
+            }
             self.parse_symbol();
             
         }
         self.tokens.push_back(Token::new(TokenType::EOF, "End of JSON", self.position));
-        &mut self.tokens
+        (&mut self.tokens,&self.diagnostic)
     }
     fn trim_white(&mut self){
         while self.current().is_ascii_whitespace(){
@@ -63,38 +67,42 @@ impl Lexer {
     
     fn parse_numeric(&mut self){
         let start = self.position;
+        let mut float = false;
         if self.current() == b'-'{
             self.next();
         }
         if !self.current().is_ascii_digit(){
-            self.tokens.push_back(Token::new(TokenType::Number, "",self.position));
+            self.tokens.push_back(Token::new(TokenType::Int, "",self.position));
             self.error(format!("Missing number after minus sign at position {}",self.position));
             return;
         }
         self.get_digits();
         if self.current() == b'.'{
+            float=true;
             self.next();
             self.get_digits();
         }
         if self.current() == b'e' || self.current() == b'E'{
             self.next();
             if self.current() == b'-' || self.current() == b'+'{
+                if self.current() == b'-'{
+                    float = true;
+                }
                 self.next();
             }
             self.get_digits();
         }
         let num = &self.input[start..self.position];
-        //println!("{:#?}",num);
-
         let num = String::from_utf8_lossy(num);
-        //println!("{:#?}",num);
-        self.tokens.push_back(Token::new(TokenType::Number, &num,self.position));
+        let num_type = if float{TokenType::Float}else{TokenType::Int};
+        self.tokens.push_back(Token::new(num_type, &num,self.position));
     }
     fn get_digits(&mut self){
         while self.current().is_ascii_digit(){
             self.next();
         }
     }
+
 
     fn parse_string(&mut self){
         self.next();
@@ -106,14 +114,13 @@ impl Lexer {
                 match self.current() {
                     b'"'|b'\\'|b'/'|b'b'|b'f'|
                     b'n'|b'r'|b't'|b'u'=>self.next(),
-                    _=>{
-                        self.error(format!("Unexpected character at position {}",self.position));
+                    c=>{
+                        self.error(format!("Unexpected control character '\\{}' at position {}",c as char,self.position));
                         self.next()
                     }
                 }
             }else if self.position>=self.input.len(){
                 self.error(format!("Missing quote at position {}",self.position));
-                self.tokens.push_back(Token::new(TokenType::Error, "",self.position));
                 return;
             }else{
                 self.next();
@@ -125,6 +132,25 @@ impl Lexer {
         self.tokens.push_back(Token::new(TokenType::String, &text,self.position));
     }
 
+    fn parse_keyword(&mut self){
+        let start = self.position;
+        while self.current().is_ascii_alphabetic() {
+            self.next();
+        }
+
+        let id = &self.input[start..self.position];
+        let id = String::from_utf8_lossy(id);
+        if &id == "true" || &id == "false"{
+            self.tokens.push_back(Token::new(TokenType::Bool,&id,self.position));
+            return;
+        }
+        if &id == "null"{
+            self.tokens.push_back(Token::new(TokenType::Null,&id,self.position));
+            return;
+        }
+        self.error(format!{"Unexpected word \"{}\" start from position {}",id,start});
+    }
+
     fn parse_symbol(&mut self){
         let token = match self.current() {
             b'['=>Token::new(TokenType::LBracket, "[",self.position),
@@ -133,8 +159,8 @@ impl Lexer {
             b'}'=>Token::new(TokenType::RCurlyBracket, "}",self.position),
             b':'=>Token::new(TokenType::Colon, ":",self.position),
             b','=>Token::new(TokenType::Comma, ",",self.position),
-            _=>{
-                self.error(format!("Unexpected symbol at position {}",self.position));
+            c=>{
+                self.error(format!("Unexpected symbol '{}' at position {}",c as char,self.position));
                 Token::new(TokenType::Error, "",self.position)
             }
         };
@@ -156,9 +182,6 @@ impl Lexer {
     }
     fn error(&mut self,diagnostic: String){
         self.diagnostic.push(diagnostic);
-    }
-    pub fn get_diagnostic(&self)-> &Vec<String>{
-        &self.diagnostic
     }
 
 }

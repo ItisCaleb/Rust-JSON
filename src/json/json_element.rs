@@ -1,28 +1,34 @@
 use std::collections::HashMap;
 
-use super::{Token, TokenType};
+use super::{Token, TokenType,Result,JsonError};
+
+macro_rules! jerr {
+    ($err:expr) => {
+        Err(JsonError::new($err.to_string()))
+    };
+}
 
 pub trait JsonElement {
     fn is_array(&self)->bool{false}
     fn is_object(&self)->bool{false}
     fn is_primitive(&self)->bool{false}
-    fn as_array(&self)->Result<&JsonArray,String>{
-        Err("JSON Element is not an array".to_string())
+    fn as_array(&self)->Result<&JsonArray>{
+        jerr!("JSON Element is not an array")
     }
-    fn as_object(&self)->Result<&JsonObject,String>{
-        Err("JSON Object is not an object".to_string())
+    fn as_object(&self)->Result<&JsonObject>{
+        jerr!("JSON Object is not an object")
     }
-    fn as_string(&self)->Result<String,String>{
-        Err("JSON Object is not a string".to_string())
+    fn as_string(&self)->Result<String>{
+        jerr!("JSON Object is not a string")
     }
-    fn as_int(&self)->Result<i32,String>{
-        Err("JSON Object is not an int".to_string())
+    fn as_int(&self)->Result<i32>{
+        jerr!("JSON Object is not an int")
     }
-    fn as_float(&self)->Result<f64,String>{
-        Err("JSON Object is not a float".to_string())
+    fn as_float(&self)->Result<f64>{
+        jerr!("JSON Object is not a float")
     }
-    fn as_bool(&self)->Result<bool,String>{
-        Err("JSON Object is not a bool".to_string())
+    fn as_bool(&self)->Result<bool>{
+        jerr!("JSON Object is not a bool")
     }
     
 }
@@ -38,7 +44,7 @@ pub struct JsonPrimitive{
 }
 impl JsonElement for JsonArray {
     fn is_array(&self)->bool {true}
-    fn as_array(&self)->Result<&JsonArray,String>{
+    fn as_array(&self)->Result<&JsonArray>{
         Ok(self)
     }
 }
@@ -58,7 +64,7 @@ impl JsonArray {
 
 impl JsonElement for JsonObject {
     fn is_object(&self)->bool {true}
-    fn as_object(&self)->Result<&JsonObject,String>{
+    fn as_object(&self)->Result<&JsonObject>{
         Ok(self)
     }
 }
@@ -78,42 +84,36 @@ impl JsonObject {
 
 impl JsonElement for JsonPrimitive {
     fn is_primitive(&self)->bool {true}
-    fn as_string(&self)->Result<String,String> {
+    fn as_string(&self)->Result<String> {
         if matches!(self.value.token_type,TokenType::String){
             Ok(self.value.text.clone())
         }else{
-            Err("JSON Object is not a string".to_string())
+            jerr!("JSON Object is not a string")
         }
         
     }
-    fn as_int(&self)->Result<i32,String> {
-        if matches!(self.value.token_type,TokenType::Number){
-            match self.value.text.parse::<i32>() {
-                Ok(v)=>Ok(v),
-                _=>Err("JSON Object is not a int".to_string())
-            }
-            
+    fn as_int(&self)->Result<i32> {
+        if matches!(self.value.token_type,TokenType::Int){
+            Ok(self.value.text.parse::<i32>().unwrap())
         }else{
-            Err("JSON Object is not a number".to_string())
+            jerr!("JSON Object is not a int")
         }
     }
-    fn as_float(&self)->Result<f64,String> {
-        if matches!(self.value.token_type,TokenType::Number){
-            match self.value.text.parse::<f64>() {
-                Ok(v)=>Ok(v),
-                _=>Err("JSON Object is not a int".to_string())
-            }
+    fn as_float(&self)->Result<f64> {
+        if matches!(self.value.token_type,TokenType::Float)||
+            matches!(self.value.token_type,TokenType::Int){
+            Ok(self.value.text.parse::<f64>().unwrap())
         }else{
-            Err("JSON Object is not a number".to_string())
+            jerr!("JSON Object is not a float")
         }
     }
-    fn as_bool(&self)->Result<bool,String> {
+    fn as_bool(&self)->Result<bool> {
         if self.value.text == "true"{
             Ok(true)
         }else if self.value.text == "false"{
             Ok(false)
         }else {
-            Err("JSON Object is not a bool".to_string())
+            jerr!("JSON Object is not a bool")
         }
     }
 }

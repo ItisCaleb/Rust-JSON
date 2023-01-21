@@ -3,5 +3,6 @@
 #[derive(PartialEq)]
 pub(crate) enum TokenType{
     LCurlyBracket,RCurlyBracket,LBracket,
-    RBracket,String,Colon,Comma,Number,Error,EOF
+    RBracket,String,Colon,Comma,Int,Float,Error,EOF,
+    Bool,Null
 }

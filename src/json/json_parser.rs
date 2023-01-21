@@ -1,10 +1,9 @@
-use std::{collections::{
-    VecDeque
-}};
+use std::collections::VecDeque;
 
-use crate::{json::{Lexer, Token}, json::TokenType};
 
-use super::{JsonElement, JsonArray, JsonObject, JsonPrimitive};
+use super::{JsonElement, JsonArray, JsonObject,
+            JsonPrimitive,Lexer,Token,TokenType,
+            Result,JsonError};
 pub struct JsonParser<'a>{
     tokens: &'a mut VecDeque<Token>,
     diagnostic: Vec<String>
@@ -12,20 +11,21 @@ pub struct JsonParser<'a>{
 
 
 impl JsonParser<'_>{ 
-    pub fn parse(input: String)-> Result<Box<dyn JsonElement>,String>{
-        let mut lex = Lexer::new(input);
-        if lex.get_diagnostic().len()>0{
-            return Err(lex.get_diagnostic().first().unwrap().to_string())
+    pub fn parse(input: &str)-> Result<Box<dyn JsonElement>>{
+        let mut lexer = Lexer::new(input.to_string());
+        let (tokens ,diagnostic)= lexer.lex();
+        if diagnostic.len()>0{
+            return Err(JsonError::new(diagnostic.first().unwrap().to_string()))
         }
-        let tokens = lex.lex();
         let mut parser: JsonParser = JsonParser{
             tokens,
             diagnostic: vec![]
         };
+        
         let json = parser.decide_parse();
         parser.tmatch(TokenType::EOF);
         if parser.diagnostic.len()>0{
-            return Err(parser.diagnostic.first().unwrap().to_string());
+            return Err(JsonError::new(parser.diagnostic.first().unwrap().to_string()));
         }
         Ok(json)
     }
@@ -54,7 +54,7 @@ impl JsonParser<'_>{
             TokenType::LBracket=>{
                 self.parse_array()
             },
-            TokenType::Number|TokenType::String=>{
+            TokenType::Int|TokenType::Float|TokenType::String=>{
                 self.parse_primitive()
             },
             _=>{
