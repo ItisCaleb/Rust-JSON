@@ -1,18 +1,16 @@
 use std::collections::VecDeque;
 
-
-use super::{JsonElement, JsonArray, JsonObject,
-            JsonPrimitive,Lexer,Token,TokenType,
-            Result,JsonError};
-pub struct JsonParser<'a>{
+use super::{
+    JsonArray, JsonElement, JsonError, JsonObject, JsonPrimitive, Lexer, Result, Token, TokenType,
+};
+pub struct JsonParser<'a> {
     tokens: &'a mut VecDeque<Token>,
-    diagnostic: Vec<String>
+    diagnostic: Vec<String>,
 }
 
-
-impl JsonParser<'_>{ 
+impl JsonParser<'_> {
     /// parse a JSON string
-    /// 
+    ///
     /// # Examples
     /// ```
     /// use rjson::{JsonParser,Result};
@@ -29,120 +27,114 @@ impl JsonParser<'_>{
     ///     Ok(())
     /// }
     /// ```
-    pub fn parse(input: &str)-> Result<Box<dyn JsonElement>>{
+    pub fn parse(input: &str) -> Result<Box<dyn JsonElement>> {
         let mut lexer = Lexer::new(input.to_string());
-        let (tokens ,diagnostic)= lexer.lex();
-        if diagnostic.len()>0{
-            return Err(JsonError::new(diagnostic.first().unwrap().to_string()))
+        let (tokens, diagnostic) = lexer.lex();
+        if diagnostic.is_empty() {
+            return Err(JsonError::new(diagnostic.first().unwrap().to_string()));
         }
-        let mut parser: JsonParser = JsonParser{
+        let mut parser: JsonParser = JsonParser {
             tokens,
-            diagnostic: vec![]
+            diagnostic: vec![],
         };
-        
+
         let json = parser.decide_parse();
-        parser.tmatch(TokenType::EOF);
-        if parser.diagnostic.len()>0{
-            return Err(JsonError::new(parser.diagnostic.first().unwrap().to_string()));
+        parser.tmatch(TokenType::Eof);
+        if parser.diagnostic.is_empty() {
+            return Err(JsonError::new(
+                parser.diagnostic.first().unwrap().to_string(),
+            ));
         }
         Ok(json)
     }
-    
-    fn tmatch(&mut self,ttype:TokenType)->Token{
+
+    fn tmatch(&mut self, ttype: TokenType) -> Token {
         let token = self.next();
-        if token.token_type==ttype{
+        if token.token_type == ttype {
             token
-        }else {
+        } else {
             let pos = token.position;
-            if token.token_type == TokenType::EOF{
-                self.diagnostic.push(format!("Unexpected end of JSON"));
-            }else {
-                self.diagnostic.push(format!("Unexpected token {} at position {}",
-                token.text,pos));
+            if token.token_type == TokenType::Eof {
+                self.diagnostic.push("Unexpected end of JSON".to_string());
+            } else {
+                self.diagnostic.push(format!(
+                    "Unexpected token {} at position {}",
+                    token.text, pos
+                ));
             }
             self.tokens.push_front(token);
-            Token::new(ttype,"",pos)
+            Token::new(ttype, "", pos)
         }
     }
-    fn decide_parse(&mut self)-> Box<dyn JsonElement>{
+    fn decide_parse(&mut self) -> Box<dyn JsonElement> {
         let token = self.peek();
-        match token{
-            TokenType::LCurlyBracket=>{
-                self.parse_object()
-            },
-            TokenType::LBracket=>{
-                self.parse_array()
-            },
-            TokenType::Int|TokenType::Float|TokenType::String=>{
-                self.parse_primitive()
-            },
-            _=>{
-                self.parse_primitive()
-            }
+        match token {
+            TokenType::LCurlyBracket => self.parse_object(),
+            TokenType::LBracket => self.parse_array(),
+            TokenType::Int | TokenType::Float | TokenType::String => self.parse_primitive(),
+            _ => self.parse_primitive(),
         }
     }
-    fn parse_array(&mut self)-> Box<JsonArray>{
+    fn parse_array(&mut self) -> Box<JsonArray> {
         self.tmatch(TokenType::LBracket);
         let mut arr = JsonArray::new();
-        if self.cmp_type(TokenType::RBracket){
+        if self.cmp_type(TokenType::RBracket) {
             self.tmatch(TokenType::RBracket);
             return arr;
         }
-        let mut i=0;
+        let mut i = 0;
         arr.get_children().insert(i, self.decide_parse());
-        while !self.cmp_type(TokenType::EOF)
-            && !self.cmp_type(TokenType::RBracket) {
-            i+=1;
+        while !self.cmp_type(TokenType::Eof) && !self.cmp_type(TokenType::RBracket) {
+            i += 1;
             self.tmatch(TokenType::Comma);
             arr.get_children().insert(i, self.decide_parse());
         }
         self.tmatch(TokenType::RBracket);
         arr
     }
-    fn parse_object(&mut self)-> Box<JsonObject>{
+    fn parse_object(&mut self) -> Box<JsonObject> {
         self.tmatch(TokenType::LCurlyBracket);
         let mut object = JsonObject::new();
-        if self.cmp_type(TokenType::RCurlyBracket){
+        if self.cmp_type(TokenType::RCurlyBracket) {
             self.tmatch(TokenType::RCurlyBracket);
             return object;
         }
         let (key, field) = self.parse_key_field();
         object.get_children().insert(key, field);
-        while  !self.cmp_type(TokenType::EOF)
-            && !self.cmp_type(TokenType::RCurlyBracket) {
+        while !self.cmp_type(TokenType::Eof) && !self.cmp_type(TokenType::RCurlyBracket) {
             self.tmatch(TokenType::Comma);
-            let (key, field) = self.parse_key_field(); 
+            let (key, field) = self.parse_key_field();
             object.get_children().insert(key, field);
         }
         self.tmatch(TokenType::RCurlyBracket);
         object
     }
-    fn parse_key_field(&mut self)->(String,Box<dyn JsonElement>){
+    fn parse_key_field(&mut self) -> (String, Box<dyn JsonElement>) {
         let key = self.tmatch(TokenType::String);
         self.tmatch(TokenType::Colon);
         let field = self.decide_parse();
-        (key.text,field)
+        (key.text, field)
     }
 
-    fn parse_primitive(&mut self)-> Box<JsonPrimitive>{
+    fn parse_primitive(&mut self) -> Box<JsonPrimitive> {
         JsonPrimitive::new(self.next())
     }
 
-    fn cmp_type(&self, ttype:TokenType)->bool{
-        self.peek()==ttype
+    fn cmp_type(&self, ttype: TokenType) -> bool {
+        self.peek() == ttype
     }
-    
-    fn peek(&self)-> TokenType{
+
+    fn peek(&self) -> TokenType {
         match self.tokens.front() {
-            Some(t)=>t.token_type,
-            None=>TokenType::Error
+            Some(t) => t.token_type,
+            None => TokenType::Error,
         }
     }
 
-    fn next(&mut self)-> Token{
+    fn next(&mut self) -> Token {
         match self.tokens.pop_front() {
-            Some(t)=>t,
-            None=> Token::new(TokenType::Error, "", 0)
+            Some(t) => t,
+            None => Token::new(TokenType::Error, "", 0),
         }
     }
 }
