@@ -1,7 +1,8 @@
 use std::collections::VecDeque;
 
 use super::{
-    JsonArray, JsonElement, JsonError, JsonObject, JsonPrimitive, Lexer, Result, Token, TokenType,
+    JsonArray, JsonElement, JsonError, JsonObject, JsonPrimitive,
+    Lexer, Result, Token, TokenType,JsonType
 };
 pub struct JsonParser<'a> {
     tokens: &'a mut VecDeque<Token>,
@@ -82,12 +83,10 @@ impl JsonParser<'_> {
             self.tmatch(TokenType::RBracket);
             return arr;
         }
-        let mut i = 0;
-        arr.get_children().insert(i, self.decide_parse());
+        arr.push_ele(self.decide_parse());
         while !self.cmp_type(TokenType::Eof) && !self.cmp_type(TokenType::RBracket) {
-            i += 1;
             self.tmatch(TokenType::Comma);
-            arr.get_children().insert(i, self.decide_parse());
+            arr.push_ele(self.decide_parse());
         }
         self.tmatch(TokenType::RBracket);
         arr
@@ -100,11 +99,11 @@ impl JsonParser<'_> {
             return object;
         }
         let (key, field) = self.parse_key_field();
-        object.get_children().insert(key, field);
+        object.put_ele(&key, field);
         while !self.cmp_type(TokenType::Eof) && !self.cmp_type(TokenType::RCurlyBracket) {
             self.tmatch(TokenType::Comma);
             let (key, field) = self.parse_key_field();
-            object.get_children().insert(key, field);
+            object.put_ele(&key, field);
         }
         self.tmatch(TokenType::RCurlyBracket);
         object
@@ -117,7 +116,14 @@ impl JsonParser<'_> {
     }
 
     fn parse_primitive(&mut self) -> Box<JsonPrimitive> {
-        JsonPrimitive::new(self.next())
+        let token = self.next();
+        JsonPrimitive::new(match token.token_type {
+            TokenType::Int=>JsonType::Int(token.text.parse().unwrap()),
+            TokenType::Float=>JsonType::Float(token.text.parse().unwrap()),
+            TokenType::String=>JsonType::String(token.text),
+            TokenType::Bool=>JsonType::Bool(token.text.parse().unwrap()),
+            _=>unreachable!()
+        })
     }
 
     fn cmp_type(&self, ttype: TokenType) -> bool {

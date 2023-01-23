@@ -8,6 +8,13 @@ pub use self::json_parser::JsonParser;
 mod json_error;
 pub use self::json_error::JsonError;
 pub use self::json_error::Result;
+mod json_serialize;
+pub use self::json_serialize::Serializable;
+mod json_serializer;
+pub use json_serializer::to_json;
+mod json_type;
+pub use self::json_type::JsonType;
+
 mod lexer;
 pub(crate) use lexer::Lexer;
 pub(crate) use lexer::Token;

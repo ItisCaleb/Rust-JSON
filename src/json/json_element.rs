@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use super::{JsonError, Result, Token, TokenType};
+use crate::Serializable;
+
+use super::{JsonError, Result, Token, JsonType};
 
 macro_rules! jerr {
     ($err:expr) => {
@@ -41,23 +43,25 @@ pub trait JsonElement {
     }
     /// get element as a JSON object
     fn object(&self) -> Result<&JsonObject> {
-        jerr!("JSON Object is not an object")
+        jerr!("JSON Element is not an object")
     }
-    /// get element as a string
-    fn string(&self) -> Result<String> {
-        jerr!("JSON Object is not a string")
+    fn primitive(&self) -> Result<&JsonPrimitive>{
+        jerr!("JSON Element is not a primitive")
     }
-    /// get element as a i32
-    fn int(&self) -> Result<i32> {
-        jerr!("JSON Object is not an int")
+    fn int(&self) -> Result<i32>{
+        jerr!("JSON Element is not a int")
     }
-    /// get element as a f64
-    fn float(&self) -> Result<f64> {
-        jerr!("JSON Object is not a float")
+
+    fn float(&self) -> Result<f64>{
+        jerr!("JSON Element is not a float")
     }
-    /// get element as a bool
-    fn bool(&self) -> Result<bool> {
-        jerr!("JSON Object is not a bool")
+
+    fn string(&self) -> Result<String>{
+        jerr!("JSON Element is not a string")
+    }
+
+    fn bool(&self) -> Result<bool>{
+        jerr!("JSON Element is not a bool")
     }
 }
 
@@ -78,7 +82,7 @@ pub struct JsonObject {
 }
 
 pub struct JsonPrimitive {
-    value: Token,
+    value: JsonType,
 }
 impl JsonElement for JsonArray {
     fn is_array(&self) -> bool {
@@ -89,14 +93,14 @@ impl JsonElement for JsonArray {
     }
 }
 impl JsonArray {
-    pub(crate) fn new() -> Box<JsonArray> {
+    pub fn new() -> Box<JsonArray> {
         JsonArray {
             children: HashMap::new(),
         }
         .into()
     }
-    pub(crate) fn get_children(&mut self) -> &mut HashMap<usize, Box<dyn JsonElement>> {
-        &mut self.children
+    pub(crate) fn get_children(&self) -> &HashMap<usize, Box<dyn JsonElement>> {
+        &self.children
     }
     pub fn len(&self) -> usize {
         self.children.len()
@@ -104,6 +108,13 @@ impl JsonArray {
 
     pub fn is_empty(&self) -> bool {
         self.children.len() == 0
+    }
+
+    pub fn push<T:Serializable>(&mut self,item: T){
+        self.children.insert(self.len(), item.serialize());
+    }
+    pub fn push_ele(&mut self,item: Box<dyn JsonElement>){
+        self.children.insert(self.len(), item);
     }
 
     pub fn get(&self, index: usize) -> Result<&dyn JsonElement> {
@@ -123,15 +134,22 @@ impl JsonElement for JsonObject {
     }
 }
 impl JsonObject {
-    pub(crate) fn new() -> Box<JsonObject> {
+    pub fn new() -> Box<JsonObject> {
         JsonObject {
             children: HashMap::new(),
         }
         .into()
     }
-    pub(crate) fn get_children(&mut self) -> &mut HashMap<String, Box<dyn JsonElement>> {
-        &mut self.children
+    pub(crate) fn get_children(&self) -> &HashMap<String, Box<dyn JsonElement>> {
+        &self.children
     }
+    pub fn put<T:Serializable>(&mut self, key: &str,item: T) {
+        self.children.insert(key.to_string(), item.serialize());
+    }
+    pub fn put_ele(&mut self, key: &str,item: Box<dyn JsonElement>){
+        self.children.insert(key.to_string(), item);
+    }
+
     pub fn get(&self, key: &str) -> Result<&dyn JsonElement> {
         match self.children.get(&key.to_string()) {
             Some(v) => Ok(v.as_ref()),
@@ -145,44 +163,46 @@ impl JsonElement for JsonPrimitive {
         true
     }
     fn is_null(&self) -> bool {
-        self.value.token_type == TokenType::Null
+        self.value == JsonType::Null
     }
-    fn string(&self) -> Result<String> {
-        if matches!(self.value.token_type, TokenType::String) {
-            Ok(self.value.text.clone())
-        } else {
-            jerr!("JSON Object is not a string")
+    fn primitive(&self) -> Result<&JsonPrimitive> {
+        Ok(self)
+    }
+    fn int(&self) -> Result<i32>{
+        match self.get() {
+            JsonType::Int(v)=>Ok(v),
+            _=>jerr!("JSON Element is not a int")
         }
     }
-    fn int(&self) -> Result<i32> {
-        if matches!(self.value.token_type, TokenType::Int) {
-            Ok(self.value.text.parse::<i32>().unwrap())
-        } else {
-            jerr!("JSON Object is not a int")
+
+    fn float(&self) -> Result<f64>{
+        match self.get() {
+            JsonType::Float(v)=>Ok(v),
+            _=>jerr!("JSON Element is not a float")
         }
     }
-    fn float(&self) -> Result<f64> {
-        if matches!(self.value.token_type, TokenType::Float)
-            || matches!(self.value.token_type, TokenType::Int)
-        {
-            Ok(self.value.text.parse::<f64>().unwrap())
-        } else {
-            jerr!("JSON Object is not a float")
+
+    fn string(&self) -> Result<String>{
+        match self.get() {
+            JsonType::String(v)=>Ok(v),
+            _=>jerr!("JSON Element is not a string")
         }
     }
-    fn bool(&self) -> Result<bool> {
-        if self.value.text == "true" {
-            Ok(true)
-        } else if self.value.text == "false" {
-            Ok(false)
-        } else {
-            jerr!("JSON Object is not a bool")
+
+    fn bool(&self) -> Result<bool>{
+        match self.get() {
+            JsonType::Bool(v)=>Ok(v),
+            _=>jerr!("JSON Element is not a bool")
         }
     }
+    
 }
 
 impl JsonPrimitive {
-    pub(crate) fn new(value: Token) -> Box<JsonPrimitive> {
+    pub(crate) fn new(value: JsonType) -> Box<JsonPrimitive> {
         JsonPrimitive { value }.into()
+    }
+    pub fn get(&self)->JsonType{
+        self.value.clone()
     }
 }

@@ -1,5 +1,6 @@
 pub mod json;
 pub use self::json::*;
+pub use rjson_macro::Serializable;
 
 #[cfg(test)]
 mod tests {
