@@ -8,21 +8,21 @@ mod tests{
 
     #[test]
     fn check_int()->Result<()>{
-        let r= JsonParser::parse("123")?.as_int()?;
+        let r= JsonParser::parse("123")?.int()?;
         assert_eq!(r,123);
         Ok(())
     }
 
     #[test]
     fn check_float()->Result<()>{
-        let r= JsonParser::parse("123.234")?.as_float()?;
+        let r= JsonParser::parse("123.234")?.float()?;
         assert_eq!(r,123.234);
         Ok(())
     }
 
     #[test]
     fn check_string()->Result<()>{
-        let r= JsonParser::parse("\"bruhmoment\"")?.as_string()?;
+        let r= JsonParser::parse("\"bruhmoment\"")?.string()?;
         assert_eq!(r,"bruhmoment");
         Ok(())
     }
@@ -34,9 +34,9 @@ mod tests{
         }";
         let r = JsonParser::parse(&json)?;
         assert!(r.is_object());
-        let r = r.as_object()?;
-        assert_eq!(r.get("starburst")?.as_bool()?,true);
-        assert_eq!(r.get("stream")?.as_int()?,12345);
+        let r = r.object()?;
+        assert_eq!(r.get("starburst")?.bool()?,true);
+        assert_eq!(r.get("stream")?.int()?,12345);
         Ok(())
     }
 
@@ -45,10 +45,10 @@ mod tests{
         let json = "[123,\"bruh\",true,null]";
         let r = JsonParser::parse(&json)?;
         assert!(r.is_array());
-        let r = r.as_array()?;
-        assert_eq!(r.get(0)?.as_int()?,123);
-        assert_eq!(r.get(1)?.as_string()?,"bruh");
-        assert_eq!(r.get(2)?.as_bool()?,true);
+        let r = r.array()?;
+        assert_eq!(r.get(0)?.int()?,123);
+        assert_eq!(r.get(1)?.string()?,"bruh");
+        assert_eq!(r.get(2)?.bool()?,true);
         assert!(r.get(3)?.is_null());
         Ok(())
     }
@@ -64,11 +64,11 @@ mod tests{
         }]";
         let r = JsonParser::parse(&json)?;
         assert!(r.is_array());
-        let r = r.as_array()?;
-        assert_eq!(r.get(0)?.as_object()?.get("hi")?.as_int()?,123);
-        assert_eq!(r.get(1)?.as_object()?.get("hi")?.as_int()?,456);
-        assert_eq!(r.get(2)?.as_object()?.get("hi")?.as_int()?,789);
-        assert_eq!(r.get(2)?.as_object()?.get("kirito")?.as_bool()?,false);
+        let r = r.array()?;
+        assert_eq!(r.get(0)?.object()?.get("hi")?.int()?,123);
+        assert_eq!(r.get(1)?.object()?.get("hi")?.int()?,456);
+        assert_eq!(r.get(2)?.object()?.get("hi")?.int()?,789);
+        assert_eq!(r.get(2)?.object()?.get("kirito")?.bool()?,false);
         Ok(())
     }
     #[test]
@@ -76,12 +76,12 @@ mod tests{
         let json = "[[0,1,2],[3,4,5],[6,7,8]]";
         let r = JsonParser::parse(&json)?;
         assert!(r.is_array());
-        let r = r.as_array()?;
+        let r = r.array()?;
         let mut c=0;
         for i in 0..r.len(){
-            let t = r.get(i)?.as_array()?;
+            let t = r.get(i)?.array()?;
             for j in 0..t.len(){
-                assert_eq!(t.get(j)?.as_int()?,c);
+                assert_eq!(t.get(j)?.int()?,c);
                 c+=1;
             }
         }

@@ -11,6 +11,24 @@ pub struct JsonParser<'a>{
 
 
 impl JsonParser<'_>{ 
+    /// parse a JSON string
+    /// 
+    /// # Examples
+    /// ```
+    /// use rjson::{JsonParser,Result};
+    /// fn main() -> Result<()>{
+    ///     let json = "[{
+    ///        \"hi\":789,
+    ///        \"kirito\":true
+    ///     }]";
+    ///     let result = JsonParser::parse(&json)?;
+    ///     let result = r.array()?;
+    ///     if result.get(0)?.object()?.get("kirito").bool()?{
+    ///         println("Link Start!");
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn parse(input: &str)-> Result<Box<dyn JsonElement>>{
         let mut lexer = Lexer::new(input.to_string());
         let (tokens ,diagnostic)= lexer.lex();
@@ -29,6 +47,7 @@ impl JsonParser<'_>{
         }
         Ok(json)
     }
+    
     fn tmatch(&mut self,ttype:TokenType)->Token{
         let token = self.next();
         if token.token_type==ttype{
