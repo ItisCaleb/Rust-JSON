@@ -35,6 +35,9 @@ fn main() -> Result<()>{
 use rjson::{Serializable,to_json};
 #[derive(Serializable)]
 struct SAO{
+    // you can add #[exclude] attribute to ignore 
+    // this field when serializing
+    #[exclude]
     admin:String,
     player:Vec<Player>,
 }

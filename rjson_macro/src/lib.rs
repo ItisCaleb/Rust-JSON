@@ -1,8 +1,8 @@
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{self, DeriveInput, Data::Struct, parse_quote};
+use syn::{self, DeriveInput, Data::Struct};
 
-#[proc_macro_derive(Serializable)]
+#[proc_macro_derive(Serializable, attributes(exclude))]
 pub fn serializable_derive(input: TokenStream)->TokenStream{
     let ast: DeriveInput = syn::parse(input).unwrap();
     let name = ast.ident;
@@ -16,7 +16,12 @@ pub fn serializable_derive(input: TokenStream)->TokenStream{
     let serial = match fields {
         syn::Fields::Named(named)=>{
             let mut st = quote!();
-            for field in named.named{
+            'outer: for field in named.named{
+                for p in &field.attrs{
+                    if p.path.is_ident("exclude"){
+                        continue 'outer
+                    }
+                }
                 let fname = field.to_owned().ident.unwrap();
                 let key = fname.to_string();
                 st.extend(quote! {
@@ -38,6 +43,5 @@ pub fn serializable_derive(input: TokenStream)->TokenStream{
             }
         }
     };
-    println!("{}",gen);
     gen.into()
 }

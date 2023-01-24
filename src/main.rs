@@ -1,7 +1,8 @@
 extern crate rjson;
-use rjson::{JsonParser, Result, Serializable,to_json, JsonType};
+use rjson::{Result, Serializable,to_json};
 #[derive(Serializable)]
 struct SAO{
+    #[exclude]
     admin:String,
     player:Vec<Player>,
 }
