@@ -1,4 +1,4 @@
-use crate::{JsonPrimitive,Token,JsonType, JsonArray};
+use crate::{JsonPrimitive,JsonType, JsonArray};
 pub use crate::JsonElement;
 pub use crate::JsonObject;
 
@@ -38,6 +38,16 @@ impl Serializable for String {
 
 
 impl <T: Serializable> Serializable for Vec<T> {
+    fn serialize(&self) -> Box<dyn JsonElement> {
+        let mut arr = JsonArray::new();
+        for item in self{
+            arr.push_ele(item.serialize());
+        }
+        arr
+    }
+}
+
+impl <T: Serializable> Serializable for [T;1] {
     fn serialize(&self) -> Box<dyn JsonElement> {
         let mut arr = JsonArray::new();
         for item in self{

@@ -17,21 +17,22 @@ impl JsonParser<'_> {
     /// use rjson::{JsonParser,Result};
     /// fn main() -> Result<()>{
     ///     let json = "[{
-    ///        \"hi\":789,
-    ///        \"kirito\":true
+    ///        \"login\":true,
+    ///        \"player\":\"Asuna\"
     ///     }]";
     ///     let result = JsonParser::parse(&json)?;
-    ///     let result = r.array()?;
-    ///     if result.get(0)?.object()?.get("kirito").bool()?{
-    ///         println("Link Start!");
+    ///     if result.array()?.get(0)?.object()?.get("login")?.bool()?{
+    ///         println!("Link Start!");
     ///     }
+    ///     //or you can use indexing
+    ///     println!("{}",result[0]["player"].string()?);
     ///     Ok(())
     /// }
     /// ```
     pub fn parse(input: &str) -> Result<Box<dyn JsonElement>> {
         let mut lexer = Lexer::new(input.to_string());
         let (tokens, diagnostic) = lexer.lex();
-        if diagnostic.is_empty() {
+        if !diagnostic.is_empty() {
             return Err(JsonError::new(diagnostic.first().unwrap().to_string()));
         }
         let mut parser: JsonParser = JsonParser {
@@ -41,7 +42,7 @@ impl JsonParser<'_> {
 
         let json = parser.decide_parse();
         parser.tmatch(TokenType::Eof);
-        if parser.diagnostic.is_empty() {
+        if !parser.diagnostic.is_empty() {
             return Err(JsonError::new(
                 parser.diagnostic.first().unwrap().to_string(),
             ));
@@ -122,6 +123,7 @@ impl JsonParser<'_> {
             TokenType::Float=>JsonType::Float(token.text.parse().unwrap()),
             TokenType::String=>JsonType::String(token.text),
             TokenType::Bool=>JsonType::Bool(token.text.parse().unwrap()),
+            TokenType::Null=>JsonType::Null,
             _=>unreachable!()
         })
     }

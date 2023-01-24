@@ -1,5 +1,5 @@
 extern crate rjson;
-use rjson::{JsonParser, Result, Serializable,to_json};
+use rjson::{JsonParser, Result, Serializable,to_json, JsonType};
 #[derive(Serializable)]
 struct SAO{
     admin:String,
@@ -14,7 +14,6 @@ struct Player{
 
 
 fn main() -> Result<()> {
-    //let x = JsonParser::parse("{\"hi\":123}")?;
     let class = SAO{
         admin: "Kayaba Akihiko".to_string(),
         player: vec![
@@ -28,6 +27,7 @@ fn main() -> Result<()> {
             }
         ]
     };
-    println!("{}", to_json(class));
+    let j = to_json(class);
+    println!("{}", j);
     Ok(())
 }

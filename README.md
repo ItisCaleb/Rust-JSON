@@ -10,17 +10,18 @@ extern crate rjson;
 use rjson::{JsonParser,Result};
 fn main() -> Result<()>{
     let json = "[{
-            \"hi\":123
-        },{
-            \"hi\":456
-        },{
-            \"hi\":789,
-            \"kirito\":true
+        \"login\":true,
+        \"player\":\"Asuna\"
         }]";
     let result = JsonParser::parse(&json)?;
-    let result = r.as_array()?;
-    if result.get(2)?.as_object()?.get("kirito").as_bool()?{
-        println("Link Start!");
+    if result.array()?.get(0)?.object()?.get("login")?.bool()?{
+        println!("Link Start!");
+    }
+    //or you can use indexing
+    println!("{}",result[0]["player"].string()?);
+    //btw you can also use patter matching
+    if let JsonType::String(admin) = result["admin"].get_type(){
+        println!("{}",admin);
     }
     Ok(())
 }
