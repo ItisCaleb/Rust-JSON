@@ -6,5 +6,5 @@ pub enum JsonType {
     Int(i32),
     Float(f64),
     Bool(bool),
-    Null
+    Null,
 }

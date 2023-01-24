@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
 use super::{
-    JsonArray, JsonElement, JsonError, JsonObject, JsonPrimitive,
-    Lexer, Result, Token, TokenType,JsonType
+    JsonArray, JsonElement, JsonError, JsonObject, JsonPrimitive, JsonType, Lexer, Result, Token,
+    TokenType,
 };
 pub struct JsonParser<'a> {
     tokens: &'a mut VecDeque<Token>,
@@ -119,12 +119,12 @@ impl JsonParser<'_> {
     fn parse_primitive(&mut self) -> Box<JsonPrimitive> {
         let token = self.next();
         JsonPrimitive::new(match token.token_type {
-            TokenType::Int=>JsonType::Int(token.text.parse().unwrap()),
-            TokenType::Float=>JsonType::Float(token.text.parse().unwrap()),
-            TokenType::String=>JsonType::String(token.text),
-            TokenType::Bool=>JsonType::Bool(token.text.parse().unwrap()),
-            TokenType::Null=>JsonType::Null,
-            _=>unreachable!()
+            TokenType::Int => JsonType::Int(token.text.parse().unwrap()),
+            TokenType::Float => JsonType::Float(token.text.parse().unwrap()),
+            TokenType::String => JsonType::String(token.text),
+            TokenType::Bool => JsonType::Bool(token.text.parse().unwrap()),
+            TokenType::Null => JsonType::Null,
+            _ => unreachable!(),
         })
     }
 
